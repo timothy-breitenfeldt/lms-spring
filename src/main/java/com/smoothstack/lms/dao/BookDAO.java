@@ -5,71 +5,76 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
+import org.springframework.jdbc.core.PreparedStatementCreator;
+import org.springframework.jdbc.core.PreparedStatementCreatorFactory;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
+
 import com.smoothstack.lms.entity.Book;
 
 public class BookDAO extends BaseDAO<Book> {
     
-    public BookDAO(Connection connection) {
-        super(connection);
+    public Integer createBook(String title, int publisherId) throws ClassNotFoundException, SQLException {
+        PreparedStatementCreatorFactory pscFactory = new PreparedStatementCreatorFactory("INSERT INTO tbl_book (title, pubId) VALUES (?, ?);");
+        PreparedStatementCreator psc = pscFactory.newPreparedStatementCreator(new Object[] {title, publisherId});
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        super.mySQLTemplate.update(psc, keyHolder);
+        return (Integer)keyHolder.getKey();
     }
     
-    public Integer insertBook(String title, int publisherId) throws SQLException {
-        String sql = "INSERT INTO tbl_book (title, pubId) VALUES (?, ?);";
-        Object[] parameters = new Object[] {title, publisherId};
-        return super.insertData(sql, parameters);
-    }
-    
-    public Integer insertBookAuthor(int bookId, int authorId) throws SQLException {
+    public Map<String, Object> createBookAuthor(int bookId, int authorId) throws ClassNotFoundException, SQLException {
         String sql = "INSERT INTO tbl_book_authors (bookId, authorId) VALUES (?, ?);";
-        Object[] parameters = new Object[] {bookId, authorId};
-        return super.insertData(sql, parameters);
+        Object[] parameters - new Object[] {bookId, authorId};
+        PreparedStatementCreatorFactory pscFactory = new PreparedStatementCreatorFactory(sql);
+        PreparedStatementCreator psc = pscFactory.newPreparedStatementCreator(parameters);
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        super.mySQLTemplate.update(psc, keyHolder);
+        return keyHolder.getKeys();
     }
     
-    public List<Book> getBooks() throws SQLException {
-        String sql = "SELECT * FROM tbl_book;";
-        return super.getData(sql);
+    public List<Book> getBooks() throws ClassNotFoundException, SQLException {
+        return super.mySQLTemplate.query("SELECT * FROM tbl_book;", this);
     }
     
     public List<Book> getAvailableBooksNotCheckedOut(int branchId, int cardNumber) throws SQLException {
-        String sql = "SELECT bookId, title, pubId"
-                + " FROM tbl_book NATURAL JOIN tbl_book_copies WHERE branchId = ? AND cardNumber = ? AND noOfCopies > 0 AND dateIn != NULL;";
-        Object[] parameters = new Object[] {branchId, cardNumber};
-        return super.getData(sql, parameters);
+        return super.mySQLTemplate.query("SELECT bookId, title, pubId FROM tbl_book NATURAL JOIN tbl_book_copies WHERE branchId = ? AND cardNumber = ? AND noOfCopies > 0 AND dateIn != NULL;",
+                new Object[] {branchId, cardNumber}, this);
     }
 
-    public Book getBook(int bookId) throws SQLException {
-        String sql = "SELECT * FROM tbl_book WHERE bookId = ?;";
-        Object[] parameters = new Object[] {bookId};
-        List<Book> books = super.getData(sql, parameters);
+    public Book getBook(int bookId) throws ClassNotFoundException, SQLException {
         Book book = null;
+        List<Book> books = super.mySQLTemplate.query("SELECT * FROM tbl_book WHERE bookId = ?;",
+                new Object[] {bookId}, this);
         
-        if (books.size() != 0) {
+        if (books.size() == 1) {
             book = books.get(0);
         }
         
         return book;
     }
     
-    public void updateBook(int bookId, String title, int publisherId) throws SQLException {
-        String sql = "UPDATE tbl_book SET title=?, pubId=? WHERE bookId = ?";
-        Object[] parameters = new Object[] {title, publisherId, bookId};
-        super.modifyData(sql, parameters);
+    public void updateBook(int bookId, String title, int publisherId) throws ClassNotFoundException, SQLException {
+        super.mySQLTemplate.update("UPDATE tbl_book SET title=?, pubId=? WHERE bookId = ?",
+                new Object[] {title, publisherId, bookId});
     }
     
-    public void deleteBook(int bookId) throws SQLException {
-        String sql = "DELETE FROM tbl_book WHERE bookId = ?;";
-        Object[] parameters = new Object[] {bookId};
-        super.modifyData(sql, parameters);
+    public void deleteBook(int bookId) throws ClassNotFoundException, SQLException {
+        super.mySQLTemplate.update("DELETE FROM tbl_book WHERE bookId = ?;",
+                new Object[] {bookId});
     }
 
     @Override
-    protected void processData(ResultSet resultSet, List<Book> list) throws SQLException {
-        while (resultSet.next()) {
+    public List<Book> extractData(ResultSet rs) throws SQLException {
+        List<Book> books = new ArrayList<>();
+        
+        while (rs.next()) {
             Book book = new Book();
-            book.setBookId(resultSet.getInt("bookId"));
-            book.setTitle(resultSet.getString("title"));
+            book.setBookId(rs.getInt("bookId"));
+            book.setTitle(rs.getString("title"));
                     list.add(book);
         }
+        
+        return books;
     }
 
 }

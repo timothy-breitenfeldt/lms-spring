@@ -1,5 +1,11 @@
 package com.smoothstack.lms.service;
 
+import java.util.List;
+
+import com.smoothstack.lms.entity.Book;
+import com.smoothstack.lms.entity.BookCopy;
+import com.smoothstack.lms.entity.LibraryBranch;
+
 public class LibrarianService {
     
     public String updateBookCopy(int bookId, int libraryBranchId, int amount) {

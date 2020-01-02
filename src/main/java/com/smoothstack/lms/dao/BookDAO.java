@@ -1,22 +1,26 @@
 package com.smoothstack.lms.dao;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.PreparedStatementCreatorFactory;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 
 import com.smoothstack.lms.entity.Book;
 
-public class BookDAO extends BaseDAO<Book> {
+public class BookDAO extends BaseDAO<Book> implements ResultSetExtractor<List<Book>> {
     
     public Integer createBook(String title, int publisherId) throws ClassNotFoundException, SQLException {
-        PreparedStatementCreatorFactory pscFactory = new PreparedStatementCreatorFactory("INSERT INTO tbl_book (title, pubId) VALUES (?, ?);");
-        PreparedStatementCreator psc = pscFactory.newPreparedStatementCreator(new Object[] {title, publisherId});
+        String sql = "INSERT INTO tbl_book (title, pubId) VALUES (?, ?);";
+        Object[] parameters = new Object[] {title, publisherId};
+        PreparedStatementCreatorFactory pscFactory = new PreparedStatementCreatorFactory(sql);
+        PreparedStatementCreator psc = pscFactory.newPreparedStatementCreator(parameters);
         KeyHolder keyHolder = new GeneratedKeyHolder();
         super.mySQLTemplate.update(psc, keyHolder);
         return (Integer)keyHolder.getKey();
@@ -24,7 +28,17 @@ public class BookDAO extends BaseDAO<Book> {
     
     public Map<String, Object> createBookAuthor(int bookId, int authorId) throws ClassNotFoundException, SQLException {
         String sql = "INSERT INTO tbl_book_authors (bookId, authorId) VALUES (?, ?);";
-        Object[] parameters - new Object[] {bookId, authorId};
+        Object[] parameters = new Object[] {bookId, authorId};
+        PreparedStatementCreatorFactory pscFactory = new PreparedStatementCreatorFactory(sql);
+        PreparedStatementCreator psc = pscFactory.newPreparedStatementCreator(parameters);
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        super.mySQLTemplate.update(psc, keyHolder);
+        return keyHolder.getKeys();
+    }
+
+    public Map<String, Object> createBookGenre(int bookId, int genreId) throws ClassNotFoundException, SQLException {
+        String sql = "INSERT INTO tbl_book_genres (bookId, genreId) VALUES (?, ?);";
+        Object[] parameters = new Object[] {bookId, genreId};
         PreparedStatementCreatorFactory pscFactory = new PreparedStatementCreatorFactory(sql);
         PreparedStatementCreator psc = pscFactory.newPreparedStatementCreator(parameters);
         KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -34,6 +48,11 @@ public class BookDAO extends BaseDAO<Book> {
     
     public List<Book> getBooks() throws ClassNotFoundException, SQLException {
         return super.mySQLTemplate.query("SELECT * FROM tbl_book;", this);
+    }
+    
+    public List<Book> getBooksByAuthorId(int authorId) throws ClassNotFoundException, SQLException {
+        return super.mySQLTemplate.query("SELECT * FROM tbl_book NATURAL JOIN tbl_book_authors WHERE authorId = ?;",
+                new Object[] {authorId}, this);
     }
     
     public List<Book> getAvailableBooksNotCheckedOut(int branchId, int cardNumber) throws SQLException {
@@ -57,6 +76,16 @@ public class BookDAO extends BaseDAO<Book> {
         super.mySQLTemplate.update("UPDATE tbl_book SET title=?, pubId=? WHERE bookId = ?",
                 new Object[] {title, publisherId, bookId});
     }
+
+    public void updateBookAuthor(int bookId, int authorId) throws ClassNotFoundException, SQLException {
+        super.mySQLTemplate.update("UPDATE tbl_book_authors SET authorId=? WHERE bookId = ?",
+                new Object[] {authorId, bookId});
+    }
+
+    public void updateBookGenre(int bookId, int genreId) throws ClassNotFoundException, SQLException {
+        super.mySQLTemplate.update("UPDATE tbl_book_genres SET genreId=? WHERE bookId = ?",
+                new Object[] {genreId, bookId});
+    }
     
     public void deleteBook(int bookId) throws ClassNotFoundException, SQLException {
         super.mySQLTemplate.update("DELETE FROM tbl_book WHERE bookId = ?;",
@@ -71,7 +100,7 @@ public class BookDAO extends BaseDAO<Book> {
             Book book = new Book();
             book.setBookId(rs.getInt("bookId"));
             book.setTitle(rs.getString("title"));
-                    list.add(book);
+                    books.add(book);
         }
         
         return books;

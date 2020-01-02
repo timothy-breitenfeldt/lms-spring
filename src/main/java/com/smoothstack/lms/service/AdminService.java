@@ -1,174 +1,196 @@
 package com.smoothstack.lms.service;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.smoothstack.lms.dao.AuthorDAO;
 import com.smoothstack.lms.dao.BookDAO;
+import com.smoothstack.lms.dao.GenreDAO;
+import com.smoothstack.lms.dao.LibraryBranchDAO;
 import com.smoothstack.lms.dao.PublisherDAO;
 import com.smoothstack.lms.entity.Author;
+import com.smoothstack.lms.entity.Book;
+import com.smoothstack.lms.entity.BookLoan;
+import com.smoothstack.lms.entity.Borrower;
+import com.smoothstack.lms.entity.Genre;
+import com.smoothstack.lms.entity.LibraryBranch;
 import com.smoothstack.lms.entity.Publisher;
 
 public class AdminService {
+    
+    
+    @Autowired
+    private BookDAO bookDAO;
+    
+    @Autowired
+    private PublisherDAO publisherDAO;
+    
+    @Autowired
+    private AuthorDAO authorDAO;
+    
+    @Autowired
+    private GenreDAO genreDAO;
+    
+    @Autowired
+    private LibraryBranchDAO libraryBranchDAO;
 
-    public List<Author> getAuthors() throws SQLException {
+    public List<Author> getAuthors() {
         List<Author> authors = new ArrayList<>();
-        Connection connection = null;
 
         try {
-            connection = DatabaseUtil.getConnection();
-            AuthorDAO adao = new AuthorDAO(connection);
-            authors = adao.getAuthors();
+            authors = authorDAO.getAuthors();
+            
+            for (Author author : authors) {
+                author.setBooks(this.bookDAO.getBooksByAuthorId(author.getAuthorId()));
+            }
         } catch (ClassNotFoundException | SQLException e) {
             e.printStackTrace();
             System.out.println("Reading authors faiiled");
-        } finally {
-            if (connection != null) {
-                connection.close();
-            }
         }
 
         return authors;
     }
 
-    public String addBook(String title, int publisherId) throws SQLException {
-        Connection connection = null;
-        
+    @Transactional
+    public String addBook(Book book) throws SQLException {
         try {
-            connection = DatabaseUtil.getConnection();
-            BookDAO bookDAO = new BookDAO(connection);
-            PublisherDAO publisherDAO = new PublisherDAO(connection);
-            Publisher publisher = publisherDAO.getPublisher(publisherId);
-
+            Publisher publisher = this.publisherDAO.getPublisher(book.getPublisherId());
+            int bookId = 0;
+            
             if (publisher == null) {
                 return "Invalid publisher ID.";
             }
             
-            bookDAO.insertBook(title, publisherId);
+            bookId = this.bookDAO.createBook(book.getTitle(), book.getPublisherId());
             
-            connection.commit();
+            if (book.getAuthors() != null) {
+                for (Author author: book.getAuthors()) {
+                    this.bookDAO.createBookAuthor(bookId, author.getAuthorId());
+                }
+            }
+            
+            if (book.getGenres() != null) {
+                for (Genre genre: book.getGenres()) {
+                    this.bookDAO.createBookGenre(bookId, genre.getGenreId());
+                }
+            }
         } catch (ClassNotFoundException | SQLException e) {
             e.printStackTrace();
             System.out.println("Adding Book failed");
-            
-            if (connection != null) {
-                connection.rollback();
-            }
-        } finally {
-            if (connection != null) {
-                connection.close();
-            }
         }
         
         return "Book added successfully";
     }
     
+    @Transactional
     public String deleteBook(int bookId) throws SQLException {
-        Connection connection = null;
         
         try {
-            connection = DatabaseUtil.getConnection();
-            BookDAO bookDAO = new BookDAO(connection);
-            bookDAO.deleteBook(bookId);
-            connection.commit();
+            this.bookDAO.deleteBook(bookId);
     } catch(ClassNotFoundException | SQLException e) {
         e.printStackTrace();
         System.out.println("Adding Book failed");
-        
-        if (connection != null) {
-            connection.rollback();
-        }
-    } finally {
-        if (connection != null) {
-            connection.close();
-        }
     }
         
         return "Successfully deleted book.";
     }
     
-    public String updateBook(int bookId, String title, int publisherId) throws SQLException {
-        Connection connection = null;
-        
+    @Transactional
+    public String updateBook(Book book) throws SQLException {
         try {
-            connection = DatabaseUtil.getConnection();
-            BookDAO bookDAO = new BookDAO(connection);
-            PublisherDAO publisherDAO = new PublisherDAO(connection);
-            Publisher publisher = publisherDAO.getPublisher(publisherId);
+            Publisher publisher = this.publisherDAO.getPublisher(book.getPublisherId());
 
             if (publisher == null) {
                 return "Invalid publisher ID.";
             }
             
-            bookDAO.updateBook(bookId, title, publisherId);
-            connection.commit();
+            this.bookDAO.updateBook(book.getBookId(), book.getTitle(), book.getPublisherId());
+            
+            if (book.getAuthors() != null) {
+                for (Author author: book.getAuthors()) {
+                    this.bookDAO.updateBookAuthor(book.getBookId(), author.getAuthorId());
+                }
+            }
+            
+            if (book.getGenres() != null) {
+                for (Genre genre: book.getGenres()) {
+                    this.bookDAO.updateBookGenre(book.getBookId(), genre.getGenreId());
+                }
+            }
     } catch(ClassNotFoundException | SQLException e) {
         e.printStackTrace();
         System.out.println("Adding Book failed");
-        
-        if (connection != null) {
-            connection.rollback();
-        }
-    } finally {
-        if (connection != null) {
-            connection.close();
-        }
     }
         
         return "Successfully updated book.";
     }
     
-    public String addAuthor(String authorName) {
+    @Transactional
+    public String addAuthor(Author author) {
         return "";
     }
     
-    public String updateAuthor(String authorId, String authorName) {
+    @Transactional
+    public String updateAuthor(Author author) {
         return "";
     }
 
+    @Transactional
     public String deleteAuthor(int authorId) {
         return "";
     }
     
-    public String addPublisher(String name, String address, String phone) {
+    @Transactional
+    public String addPublisher(Publisher publisher) {
         return "";
     }
     
-    public String updatePublisher(int publisherId, String name, String address, String phone) {
+    @Transactional
+    public String updatePublisher(Publisher publisher) {
         return "";
     }
     
+    @Transactional
     public String deletePublisher(int publisherId) {
         return "";
     }
     
-    public String addLibraryBranch(String name, String address) {
+    @Transactional
+    public String addLibraryBranch(LibraryBranch libraryBranch) {
         return "";
     }
     
-    public String updateLibraryBranch(int branchId, String name, String address) {
+    @Transactional
+    public String updateLibraryBranch(LibraryBranch libraryBranch) {
         return "";
     }
     
+    @Transactional
     public String deleteLibraryBranch(int branchId) {
         return "";
     }
     
-    public String addBorrower(String name, String address, String phone) {
+    @Transactional
+    public String addBorrower(Borrower borrower) {
         return "";
     }
     
-    public String updateBorrower(int cardNumber, String name, String address, String phone) {
+    @Transactional
+    public String updateBorrower(Borrower borrower) {
         return "";
     }
     
+    @Transactional
     public String deleteBorrower(int cardNumber) {
         return "";
     }
     
-    public String overrideDueDate(int cardNumber, int bookId, int libraryBranchId, String dueDate) {
+    @Transactional
+    public String overrideDueDate(BookLoan bookLoan) {
         return "";
     }
     

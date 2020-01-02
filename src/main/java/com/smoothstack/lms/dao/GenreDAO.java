@@ -1,33 +1,37 @@
 package com.smoothstack.lms.dao;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.jdbc.core.PreparedStatementCreator;
+import org.springframework.jdbc.core.PreparedStatementCreatorFactory;
+import org.springframework.jdbc.core.ResultSetExtractor;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 
 import com.smoothstack.lms.entity.Genre;
 
-public class GenreDAO extends BaseDAO<Genre> {
+public class GenreDAO extends BaseDAO<Genre> implements ResultSetExtractor<List<Genre>> {
 
-    public GenreDAO(Connection connection) {
-        super(connection);
-    }
-
-    public Integer createGenre(String genreName) throws SQLException {
+    public Integer createGenre(String genreName) throws ClassNotFoundException, SQLException {
         String sql = "INSERT INTO tbl_genre (genreName) VALUES (?);";
         Object[] parameters = new Object[] {genreName};
-        return super.insertData(sql, parameters);
+        PreparedStatementCreatorFactory pscFactory = new PreparedStatementCreatorFactory(sql);
+        PreparedStatementCreator psc = pscFactory.newPreparedStatementCreator(parameters);
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        super.mySQLTemplate.update(psc, keyHolder);
+        return (Integer)keyHolder.getKey();
     }
     
-    public List<Genre> getGenres() throws SQLException {
-        String sql = "SELECT * FROM tbl_genre;";
-        return super.getData(sql);
+    public List<Genre> getGenres() throws ClassNotFoundException, SQLException {
+        return super.mySQLTemplate.query("SELECT * FROM tbl_genre;", this);
     }
     
-    public Genre getGenre(int genreId) throws SQLException {
-        String sql = "SELECT * FROM tbl_genre WHERE genreId = ?";
-        Object[] parameters = new Object[] {genreId};
-        List<Genre> genres = super.getData(sql, parameters);
+    public Genre getGenre(int genreId) throws ClassNotFoundException, SQLException {
+        List<Genre> genres = super.mySQLTemplate.query("SELECT * FROM tbl_genre WHERE genreId = ?",
+                new Object[] {genreId}, this);
         Genre genre = null;
         
         if (genres.size() != 0) {
@@ -37,26 +41,28 @@ public class GenreDAO extends BaseDAO<Genre> {
         return genre;
     }
     
-    public void updateGenre(int genreId, String genreName) throws SQLException {
-        String sql = "UPDATE tbl_genre SET genreName=? WHERE genreId = ?;";
-        Object[] parameters = new Object[] {genreId, genreName};
-        super.modifyData(sql, parameters);
+    public void updateGenre(int genreId, String genreName) throws ClassNotFoundException, SQLException {
+        super.mySQLTemplate.update("UPDATE tbl_genre SET genreName=? WHERE genreId = ?;",
+                new Object[] {genreId, genreName}, this);
     }
     
-    public void deleteGenre(int genreId) throws SQLException {
-        String sql = "DELETE FROM tbl_genre WHERE genreId = ?;";
-        Object[] parameters = new Object[] {genreId};
-        super.modifyData(sql, parameters);
+    public void deleteGenre(int genreId) throws ClassNotFoundException, SQLException {
+        super.mySQLTemplate.update("DELETE FROM tbl_genre WHERE genreId = ?;",
+                new Object[] {genreId});
     }
     
     @Override
-    protected void processData(ResultSet resultSet, List<Genre> list) throws SQLException {
-        while (resultSet.next()) {
+    public List<Genre> extractData(ResultSet rs) throws SQLException {
+        List<Genre> genres = new ArrayList<>();
+        
+        while (rs.next()) {
             Genre genre = new Genre();
-            genre.setGenreId(resultSet.getInt("genreId"));
-            genre.setName(resultSet.getString("genreName"));
-            list.add(genre);
+            genre.setGenreId(rs.getInt("genreId"));
+            genre.setName(rs.getString("genreName"));
+            genres.add(genre);
         }
+        
+        return genres;
     }
 
 }

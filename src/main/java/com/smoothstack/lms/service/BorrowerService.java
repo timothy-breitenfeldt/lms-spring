@@ -2,16 +2,17 @@ package com.smoothstack.lms.service;
 
 import java.util.List;
 
+import com.smoothstack.lms.entity.Book;
 import com.smoothstack.lms.entity.BookLoan;
 import com.smoothstack.lms.entity.LibraryBranch;
 
 public class BorrowerService {
     
-    public void checkoutBook(int bookId, int branchId, int cardNumber) {
+    public String checkoutBook(int bookId, int branchId, int cardNumber) {
         return "";
     }
     
-    public void checkinBook(int bookId, int branchId, int cardNumber) {
+    public String checkinBook(int bookId, int branchId, int cardNumber) {
         return "";
     }
     

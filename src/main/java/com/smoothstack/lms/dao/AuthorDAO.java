@@ -2,27 +2,31 @@ package com.smoothstack.lms.dao;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.PreparedStatementCreatorFactory;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 
 import com.smoothstack.lms.entity.Author;
 
-public class AuthorDAO extends BaseDAO<Author> {
+public class AuthorDAO extends BaseDAO<Author> implements ResultSetExtractor<List<Author>> {
     
     public Integer createAuthor(String authorName) throws ClassNotFoundException, SQLException {
-        PreparedStatementCreatorFactory pscFactory = new PreparedStatementCreatorFactory("INSERT INTO tbl_author (authorName) VALUES (?);");
-        PreparedStatementCreator psc = pscFactory.newPreparedStatementCreator(new Object[] {authorName});
+        String sql = "INSERT INTO tbl_author (authorName) VALUES (?);";
+        Object[] parameters = new Object[] {authorName};
+        PreparedStatementCreatorFactory pscFactory = new PreparedStatementCreatorFactory(sql);
+        PreparedStatementCreator psc = pscFactory.newPreparedStatementCreator(parameters);
         KeyHolder keyHolder = new GeneratedKeyHolder();
         super.mySQLTemplate.update(psc, keyHolder);
         return (Integer)keyHolder.getKey();
     }
     
     public List<Author> getAuthors() throws ClassNotFoundException, SQLException {
-        return super.mySQLTemplate.query(sql"SELECT * FROM tbl_author;", this);
+        return super.mySQLTemplate.query("SELECT * FROM tbl_author;", this);
     }
     
     public Author getAuthor(int authorId) throws ClassNotFoundException, SQLException {
@@ -55,7 +59,7 @@ public class AuthorDAO extends BaseDAO<Author> {
             Author author = new Author();
             author.setAuthorId(rs.getInt("authorId"));
             author.setName(rs.getString("authorName"));
-            list.add(author);
+            authors.add(author);
         }
         
         return authors;

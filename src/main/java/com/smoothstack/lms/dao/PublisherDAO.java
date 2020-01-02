@@ -1,33 +1,37 @@
 package com.smoothstack.lms.dao;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.jdbc.core.PreparedStatementCreator;
+import org.springframework.jdbc.core.PreparedStatementCreatorFactory;
+import org.springframework.jdbc.core.ResultSetExtractor;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 
 import com.smoothstack.lms.entity.Publisher;
 
-public class PublisherDAO extends BaseDAO<Publisher> {
+public class PublisherDAO extends BaseDAO<Publisher> implements ResultSetExtractor<List<Publisher>> {
     
-    public PublisherDAO(Connection connection) {
-        super(connection);
-    }
-    
-    public Integer createPublisher(String publisherName, String publisherAddress, String publisherPhone) throws SQLException {
+    public Integer createPublisher(String publisherName, String publisherAddress, String publisherPhone) throws ClassNotFoundException, SQLException {
         String sql = "INSERT INTO tbl_publisher (publisherName, publisherAddress, publisherPhone) VALUES (?, ?, ?);";
         Object[] parameters = new Object[] {publisherName, publisherAddress, publisherPhone};
-        return super.insertData(sql, parameters);
+        PreparedStatementCreatorFactory pscFactory = new PreparedStatementCreatorFactory(sql);
+        PreparedStatementCreator psc = pscFactory.newPreparedStatementCreator(parameters);
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        super.mySQLTemplate.update(psc, keyHolder);
+        return (Integer)keyHolder.getKey();
     }
     
-    public List<Publisher> getPublishers() throws SQLException {
-        String sql = "SELECT * FROM tbl_publisher;";
-        return super.getData(sql);
+    public List<Publisher> getPublishers() throws ClassNotFoundException, SQLException {
+        return super.mySQLTemplate.query("SELECT * FROM tbl_publisher;", this);
     }
     
-    public Publisher getPublisher(int publisherId) throws SQLException {
-        String sql = "SELECT * FROM tbl_publisher WHERE publisherId = ?;";
-        Object[] parameters = new Object[] {publisherId};
-        List<Publisher> publishers = super.getData(sql, parameters);
+    public Publisher getPublisher(int publisherId) throws ClassNotFoundException, SQLException {
+        List<Publisher> publishers = super.mySQLTemplate.query("SELECT * FROM tbl_publisher WHERE publisherId = ?;",
+                new Object[] {publisherId}, this);
         Publisher publisher = null;
         
         if (publishers.size() != 0) {
@@ -37,28 +41,30 @@ public class PublisherDAO extends BaseDAO<Publisher> {
         return publisher;
     }
     
-    public void updatePublisher(int publisherId, String publisherName, String publisherAddress, String publisherPhone) throws SQLException {
-        String sql = "UPDATE tbl_publisher SET publisherName=?, publisherAddress=?, publisherPhone=? WHERE publisherId = ?";
-        Object[] parameters = new Object[] {publisherName, publisherAddress, publisherPhone, publisherId};
-        super.modifyData(sql, parameters);
+    public void updatePublisher(int publisherId, String publisherName, String publisherAddress, String publisherPhone) throws ClassNotFoundException, SQLException {
+        super.mySQLTemplate.update("UPDATE tbl_publisher SET publisherName=?, publisherAddress=?, publisherPhone=? WHERE publisherId = ?",
+                new Object[] {publisherName, publisherAddress, publisherPhone, publisherId});
     }
     
-    public void deletePublisher(int publisherId) throws SQLException {
-        String sql = "DELETE FROM tbl_publisher WHERE publisherId = ?;";
-        Object[] parameters = new Object[] {publisherId};
-        super.getData(sql, parameters);
+    public void deletePublisher(int publisherId) throws ClassNotFoundException, SQLException {
+        super.mySQLTemplate.update("DELETE FROM tbl_publisher WHERE publisherId = ?;",
+                new Object[] {publisherId});
     }
 
     @Override
-    protected void processData(ResultSet resultSet, List<Publisher> list) throws SQLException {
-        while (resultSet.next()) {
+    public List<Publisher> extractData(ResultSet rs) throws SQLException {
+        List<Publisher> publishers = new ArrayList<>();
+        
+        while (rs.next()) {
             Publisher publisher = new Publisher();
-            publisher.setPublisherId(resultSet.getInt("publisherId"));
-            publisher.setName(resultSet.getString("publisherName"));
-            publisher.setAddress(resultSet.getString("publisherAddress"));
-            publisher.setPhoneNumber(resultSet.getString("publisherPhone"));
-            list.add(publisher);
+            publisher.setPublisherId(rs.getInt("publisherId"));
+            publisher.setName(rs.getString("publisherName"));
+            publisher.setAddress(rs.getString("publisherAddress"));
+            publisher.setPhoneNumber(rs.getString("publisherPhone"));
+            publishers.add(publisher);
         }
+        
+        return publishers;
     }
 
 }
